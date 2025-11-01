@@ -17,44 +17,44 @@ pub fn build(b: *std.Build) !void {
     });
     libwasm3.root_module.addCMacro("d_m3HasTracer", "1");
 
-    if (libwasm3.rootModuleTarget().cpu.arch.isWasm()) {
-        if (libwasm3.rootModuleTarget().os.tag == .wasi) {
+    const is_wasm = target.result.cpu.arch.isWasm();
+    const is_wasi = target.result.os.tag == .wasi;
+
+    if (is_wasm) {
+        if (is_wasi) {
             libwasm3.root_module.addCMacro("d_m3HasWASI", "1");
             libwasm3.linkSystemLibrary("wasi-emulated-process-clocks");
         }
     }
     libwasm3.addIncludePath(b.path("source"));
     libwasm3.addCSourceFiles(.{
+        .root = b.path("source"),
         .files = &.{
-            "source/m3_api_libc.c",
-            "source/extensions/m3_extensions.c",
-            "source/m3_api_meta_wasi.c",
-            "source/m3_api_tracer.c",
-            "source/m3_api_uvwasi.c",
-            "source/m3_api_wasi.c",
-            "source/m3_bind.c",
-            "source/m3_code.c",
-            "source/m3_compile.c",
-            "source/m3_core.c",
-            "source/m3_env.c",
-            "source/m3_exec.c",
-            "source/m3_function.c",
-            "source/m3_info.c",
-            "source/m3_module.c",
-            "source/m3_parse.c",
+            "m3_api_libc.c",
+            "extensions/m3_extensions.c",
+            "m3_api_meta_wasi.c",
+            "m3_api_tracer.c",
+            "m3_api_uvwasi.c",
+            "m3_api_wasi.c",
+            "m3_bind.c",
+            "m3_code.c",
+            "m3_compile.c",
+            "m3_core.c",
+            "m3_env.c",
+            "m3_exec.c",
+            "m3_function.c",
+            "m3_info.c",
+            "m3_module.c",
+            "m3_parse.c",
         },
-        .flags = if (libwasm3.rootModuleTarget().cpu.arch.isWasm())
-            &cflags ++ [_][]const u8{
-                "-Xclang",
-                "-target-feature",
-                "-Xclang",
-                "+tail-call",
-            }
+        .flags = if (is_wasm)
+            &cflags ++ wasm_cflags
         else
             &cflags,
     });
     libwasm3.linkSystemLibrary("m");
     libwasm3.linkLibC();
+    b.installArtifact(libwasm3);
 
     if (!libm3_only) {
         const wasm3 = b.addExecutable(.{
@@ -70,13 +70,13 @@ pub fn build(b: *std.Build) !void {
         }
 
         wasm3.addCSourceFile(.{
-            .file = .{ .cwd_relative = "platforms/app/main.c" },
+            .file = b.path("platforms/app/main.c"),
             .flags = &cflags,
         });
 
         wasm3.linkLibrary(libwasm3);
         b.installArtifact(wasm3);
-    } else b.installArtifact(libwasm3);
+    }
 }
 
 const cflags = [_][]const u8{
@@ -88,4 +88,11 @@ const cflags = [_][]const u8{
     "-Wpointer-arith",
     "-Wstrict-aliasing=2",
     "-std=gnu11",
+};
+
+const wasm_cflags = [_][]const u8{
+    "-Xclang",
+    "-target-feature",
+    "-Xclang",
+    "+tail-call",
 };
