@@ -52,6 +52,10 @@ static bool is_gas_metered = false;
 
 m3ApiRawFunction(metering_usegas)
 {
+    (void)runtime;
+    (void)_ctx;
+    (void)_mem;
+
     m3ApiGetArg     (int32_t, gas)
 
     current_gas -= gas;
@@ -216,7 +220,7 @@ M3Result repl_load_hex  (u32 fsize)
     return result;
 }
 
-void print_gas_used()
+void print_gas_used(void)
 {
 #if defined(GAS_LIMIT)
     if (is_gas_metered) {
@@ -225,7 +229,7 @@ void print_gas_used()
 #endif
 }
 
-void print_backtrace()
+void print_backtrace(void)
 {
     IM3BacktraceInfo info = m3_GetBacktrace(runtime);
     if (!info) {
@@ -432,12 +436,12 @@ M3Result repl_global_set  (const char* name, const char* value)
     return m3_SetGlobal (g, &tagged);
 }
 
-M3Result repl_compile  ()
+M3Result repl_compile  (void)
 {
     return m3_CompileModule(runtime->modules);
 }
 
-M3Result repl_dump  ()
+M3Result repl_dump  (void)
 {
     uint32_t len;
     uint8_t* mem = m3_GetMemory(runtime, &len, 0);
@@ -455,7 +459,7 @@ M3Result repl_dump  ()
     return m3Err_none;
 }
 
-void repl_free  ()
+void repl_free  (void)
 {
     if (runtime) {
         m3_FreeRuntime (runtime);
@@ -533,7 +537,7 @@ int split_argv(char *str, char** argv)
     return result;
 }
 
-void print_version() {
+void print_version(void) {
     const char* wasm3_env = getenv("WASM3");
     const char* wasm3_arch = getenv("WASM3_ARCH");
 
@@ -544,7 +548,7 @@ void print_version() {
     printf("Build: " __DATE__ " " __TIME__ ", " M3_COMPILER_VER "\n");
 }
 
-void print_usage() {
+void print_usage(void) {
     puts("Usage:");
     puts("  wasm3 [options] <file> [args...]");
     puts("  wasm3 --repl [file]");
@@ -621,11 +625,17 @@ int  main  (int i_argc, const char* i_argv[])
     ARGV_SET(argFile);
 
     result = repl_init(argStackSize);
-    if (result) FATAL("repl_init: %s", result);
+    if (result) {
+        fprintf(stderr, "Error: [Fatal] " "repl_init: %s" "\n", result);
+        goto _onfatal;
+    }
 
     if (argFile) {
         result = repl_load(argFile);
-        if (result) FATAL("repl_load: %s", result);
+        if (result) {
+            fprintf(stderr, "Error: [Fatal] " "repl_load: %s" "\n", result);
+            goto _onfatal;
+        }
 
         if (argCompile) {
             repl_compile();

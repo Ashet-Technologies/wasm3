@@ -86,6 +86,7 @@ const cflags = [_][]const u8{
     "-Wparentheses",
     "-Wundef",
     "-Wpointer-arith",
+    "-Wno-date-time",
     "-Wstrict-aliasing=2",
     "-std=gnu11",
 };
