@@ -23,11 +23,11 @@ pub fn build(b: *std.Build) !void {
     if (is_wasm) {
         if (is_wasi) {
             libwasm3.root_module.addCMacro("d_m3HasWASI", "1");
-            libwasm3.linkSystemLibrary("wasi-emulated-process-clocks");
+            libwasm3.root_module.linkSystemLibrary("wasi-emulated-process-clocks", .{});
         }
     }
-    libwasm3.addIncludePath(b.path("source"));
-    libwasm3.addCSourceFiles(.{
+    libwasm3.root_module.addIncludePath(b.path("source"));
+    libwasm3.root_module.addCSourceFiles(.{
         .root = b.path("source"),
         .files = &.{
             "m3_api_libc.c",
@@ -52,8 +52,8 @@ pub fn build(b: *std.Build) !void {
         else
             &cflags,
     });
-    libwasm3.linkSystemLibrary("m");
-    libwasm3.linkLibC();
+    libwasm3.root_module.linkSystemLibrary("m", .{});
+    libwasm3.root_module.link_libc = true;
     b.installArtifact(libwasm3);
 
     if (!libm3_only) {
@@ -66,15 +66,15 @@ pub fn build(b: *std.Build) !void {
         });
 
         for (libwasm3.root_module.include_dirs.items) |dir| {
-            wasm3.addIncludePath(dir.path);
+            wasm3.root_module.addIncludePath(dir.path);
         }
 
-        wasm3.addCSourceFile(.{
+        wasm3.root_module.addCSourceFile(.{
             .file = b.path("platforms/app/main.c"),
             .flags = &cflags,
         });
 
-        wasm3.linkLibrary(libwasm3);
+        wasm3.root_module.linkLibrary(libwasm3);
         b.installArtifact(wasm3);
     }
 }
